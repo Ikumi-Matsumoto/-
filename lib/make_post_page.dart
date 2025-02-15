@@ -32,6 +32,25 @@ class _MakePostPageState extends State<MakePostPage> {
       'text' : text,
     };
 
+    // 現在の最大のpost_numを取得
+    final response = await http.get(Uri.parse('http://10.0.2.2:8000/posts/?thread_id=${widget.thread_id}'));
+    if (response.statusCode == 200) {
+      final List<dynamic> posts = json.decode(response.body);
+      int maxPostNum = 0;
+      for (var post in posts) {
+      if (post['post_num'] > maxPostNum) {
+        maxPostNum = post['post_num'];
+      }
+      }
+      post['post_num'] = maxPostNum + 1;
+    } else {
+      print('Failed to fetch posts: ${response.body}');
+      ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to fetch posts: ${response.body}')),
+      );
+      return;
+    }
+
     const String apiUrl = 'http://10.0.2.2:8000/posts/';
 
     try {

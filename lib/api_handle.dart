@@ -21,6 +21,7 @@ class HelloResponse {
 class ApiService {
   final String apiUrl = 'http://10.0.2.2:8000/users/'; // 実際のAPIのURLに変更
   final String apiUrl_token = 'http://10.0.2.2:8000/token/';
+  final String postUrl = 'http://10.0.2.2:8000/posts/'; // 投稿用APIエンドポイント
   final String threadUrl = 'http://10.0.2.2:8000/threads/'; // スレッド用APIエンドポイント
 
 
@@ -96,42 +97,70 @@ class ApiService {
       throw Exception('スレッド作成中にエラーが発生しました: $e');
     }
   }
-}
 
-Future<String> helloRequester() async {
-  try {
-    print('helloRequester');
-    var helloUri = 'http://10.0.2.2:8000/users/user'; // 実際のAPIのURLに変更
+  // 新しい投稿を追加するメソッド
+  Future<Map<String, dynamic>> addPost(Map<String, dynamic> postData) async {
+    try {
+      // ストレージからアクセストークンを取得
+      var accessToken = await storage.read(key: "accessToken");
+      if (accessToken == null) {
+        throw Exception('アクセストークンが見つかりません。ログインしてください。');
+      }
 
-    var accessToken = await storage.read(key: "accessToken");
-    print('ストレージ${accessToken}');
-    final response = await http.get(
-      Uri.parse(helloUri),
-      headers: {
-        'accept': 'application/json',
-        'Authorization': 'Bearer ${accessToken}',
-      },
-    );
+      final response = await http.post(
+        Uri.parse(postUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode(postData),
+      );
 
-    if (response.statusCode == 200) {
-
-      Map<String, dynamic> decoded = json.decode(response.body);
-      print('中身${response.body}');
-      var helloResponse = HelloResponse.fromJson(decoded);
-      return helloResponse.id.toString();
-
-
-    } else if (response.statusCode == 401 || response.statusCode == 404) {
-      print("send refreshTokenRequester");
-      return ('errer');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('投稿作成に失敗しました。ステータスコード: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('投稿作成中にエラーが発生しました: $e');
     }
-    else {
-      throw Exception("Hello Error");
-    }
-  }catch(e){
-    // throw Exception('Error occurred: $e');
-    return ('エラー${e}');
-
   }
 }
+
+// Future<String> helloRequester() async {
+//   try {
+//     print('helloRequester');
+//     var helloUri = 'http://10.0.2.2:8000/users/user'; // 実際のAPIのURLに変更
+
+//     var accessToken = await storage.read(key: "accessToken");
+//     print('ストレージ${accessToken}');
+//     final response = await http.get(
+//       Uri.parse(helloUri),
+//       headers: {
+//         'accept': 'application/json',
+//         'Authorization': 'Bearer ${accessToken}',
+//       },
+//     );
+
+//     if (response.statusCode == 200) {
+
+//       Map<String, dynamic> decoded = json.decode(response.body);
+//       print('中身${response.body}');
+//       var helloResponse = HelloResponse.fromJson(decoded);
+//       return helloResponse.id.toString();
+
+
+//     } else if (response.statusCode == 401 || response.statusCode == 404) {
+//       print("send refreshTokenRequester");
+//       return ('errer');
+//     }
+//     else {
+//       throw Exception("Hello Error");
+//     }
+//   }catch(e){
+//     // throw Exception('Error occurred: $e');
+//     return ('エラー${e}');
+
+//   }
+// }
 

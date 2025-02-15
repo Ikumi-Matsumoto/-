@@ -32,7 +32,7 @@ class _MakePostPageState extends State<MakePostPage> {
       'text' : text,
     };
 
-    const String apiUrl = 'http://10.0.2.2:8000/post/';
+    const String apiUrl = 'http://10.0.2.2:8000/posts/';
 
     try {
       final response = await http.post(

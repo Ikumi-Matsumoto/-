@@ -1,16 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'post_view.dart';
 
 class MakePostPage extends StatefulWidget {
-  const MakePostPage({
-    super.key,
-    required this.thread_id,
-    required this.user_id,
-  });
+  final int thread_id;
+  final String authToken;
 
-  final String thread_id;
-  final String user_id;
+  MakePostPage({required this.thread_id, required this.authToken});
 
   @override
   State<MakePostPage> createState() => _MakePostPageState();
@@ -21,66 +18,53 @@ class _MakePostPageState extends State<MakePostPage> {
   bool isSecret = false;
 
   void post() async {
-    // 入力内容を投稿
     final String text = _controller.text;
 
-    // 投稿を作成
     final post = {
-      'thread_id' : widget.thread_id,
-      'is_secret' : isSecret,
-      'post_num' : 0,
-      'text' : text,
+      'thread_id': widget.thread_id,
+      'is_secret': isSecret,
+      'post_num': 0,
+      'text': text,
     };
 
-    // 現在の最大のpost_numを取得
-    final response = await http.get(Uri.parse('http://10.0.2.2:8000/posts/?thread_id=${widget.thread_id}'));
-    if (response.statusCode == 200) {
-      final List<dynamic> posts = json.decode(response.body);
-      int maxPostNum = 0;
-      for (var post in posts) {
-      if (post['post_num'] > maxPostNum) {
-        maxPostNum = post['post_num'];
-      }
-      }
-      post['post_num'] = maxPostNum + 1;
-    } else {
-      print('Failed to fetch posts: ${response.body}');
-      ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to fetch posts: ${response.body}')),
-      );
-      return;
-    }
+    const String apiUrl = 'http://localhost:8000/posts/';
 
-    const String apiUrl = 'http://10.0.2.2:8000/posts/';
+    debugPrint("📤 投稿開始: $post");
 
     try {
       final response = await http.post(
         Uri.parse(apiUrl),
-        headers: {'Content-Type' : 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.authToken}', // ✅ 認証トークンを追加
+        },
         body: json.encode(post),
       );
 
-      if (response.statusCode == 201) {
+      debugPrint("📩 サーバー応答: ${response.statusCode} - ${response.body}");
+
+      if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
-        print('Post created: $responseBody');
+        debugPrint("✅ 投稿成功: $responseBody");
 
         // スレッドのページに遷移
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => MakePostPage(thread_id: '', user_id: '',)
-          )
+            builder: (context) =>
+                PostView(thread_id: widget.thread_id, authToken: widget.authToken),
+          ),
         );
       } else {
-        print('Failed to create post: ${response.body}');
+        debugPrint("❌ 投稿失敗 (ステータスコード: ${response.statusCode}): ${response.body}");
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create post: ${response.body}')),
+          SnackBar(content: Text('投稿に失敗しました: ${response.body}')),
         );
       }
-    } catch (e) {
-      print('Error occurred: $e');
+    } catch (e, stacktrace) {
+      debugPrint("🚨 エラー発生: $e\n$stacktrace");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error occurred: $e')),
+        SnackBar(content: Text('エラーが発生しました: $e')),
       );
     }
   }
@@ -89,24 +73,25 @@ class _MakePostPageState extends State<MakePostPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('スレッドに投稿する'),
+        title: const Text('スレッドに投稿する'),
         backgroundColor: Colors.grey,
       ),
       body: Center(
         child: Padding(
-          padding: EdgeInsets.all(30.0),
+          padding: const EdgeInsets.all(30.0),
           child: Column(
             children: [
-              Text('投稿先スレッド: スレッドタイトル',
+              const Text(
+                '投稿先スレッド: スレッドタイトル',
                 style: TextStyle(fontSize: 18.0),
               ),
-              SizedBox(height: 20.0,),
+              const SizedBox(height: 20.0),
               TextField(
                 controller: _controller,
                 keyboardType: TextInputType.multiline,
                 maxLines: 10,
                 maxLength: 140,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: '投稿内容を入力',
                   border: OutlineInputBorder(),
                 ),
@@ -115,24 +100,25 @@ class _MakePostPageState extends State<MakePostPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Checkbox(
-                    value: isSecret,
-                    onChanged: (bool? newValue) {
-                      setState(() {
-                        isSecret = newValue ?? false;
-                      });
-                    }
-                  ),
-                  Text('匿名で投稿する')
+                      value: isSecret,
+                      onChanged: (bool? newValue) {
+                        setState(() {
+                          isSecret = newValue ?? false;
+                        });
+                      }),
+                  const Text('匿名で投稿する')
                 ],
               ),
-              SizedBox(height: 30.0,),
+              const SizedBox(height: 30.0),
               ElevatedButton(
                 onPressed: () {
-                  if (_controller.text.length >= 1) {
+                  if (_controller.text.trim().isNotEmpty) {
                     post();
-                  } else {null;}
+                  } else {
+                    debugPrint("⚠️ 投稿内容が空です");
+                  }
                 },
-                child: Text(
+                child: const Text(
                   '投稿',
                   style: TextStyle(
                     fontSize: 22.0,
@@ -141,14 +127,8 @@ class _MakePostPageState extends State<MakePostPage> {
               )
             ],
           ),
-        )
+        ),
       ),
     );
   }
-}
-
-void main() {
-  runApp(MaterialApp(
-    home: MakePostPage(thread_id: 'thread', user_id: 'user'),
-  ));
 }

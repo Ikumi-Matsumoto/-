@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'thread_view.dart';
 import 'api_service.dart';
 import 'registration_page.dart';
-import 'createthread.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,18 +17,17 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
 class PostRequestDemo extends StatefulWidget {
+  @override
+  _PostRequestDemoState createState() => _PostRequestDemoState();
+}
+
+class _PostRequestDemoState extends State<PostRequestDemo> {
   final ApiService apiService = ApiService();
   final TextEditingController nameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   String _errorMessage = '';
-
-  @override
-  _PostRequestDemoState createState() => new _PostRequestDemoState();
-}
-
-class _PostRequestDemoState extends State<PostRequestDemo> {
-
 
   @override
   Widget build(BuildContext context) {
@@ -44,95 +43,89 @@ class _PostRequestDemoState extends State<PostRequestDemo> {
         child: Column(
           children: [
             TextField(
-              controller: widget.nameController,
+              controller: nameController,
               decoration: InputDecoration(labelText: '名前'),
             ),
             TextField(
-              controller: widget.passwordController,
+              controller: passwordController,
               decoration: InputDecoration(labelText: 'パスワード'),
               obscureText: true, // パスワード入力を隠す
             ),
             SizedBox(height: 20),
-            Padding(
-                padding: EdgeInsets.all(35)
-            ),
-            if (widget._errorMessage.isNotEmpty) // エラーがあるときだけ表示
+            if (_errorMessage.isNotEmpty) // エラーがあるときだけ表示
               Text(
-                widget._errorMessage,
+                _errorMessage,
                 style: TextStyle(color: Colors.red, fontSize: 16),
               ),
-        SizedBox(
-          width: 200,
-          height: 80,
-            child:
-            ElevatedButton(
-              style: ButtonStyle(
-                backgroundColor: MaterialStateProperty.all(Color(0xFFD9D9D9)),
-              ),
-              onPressed: () async {
-                String username = widget.nameController.text;
-                String password = widget.passwordController.text;
-                print("ログイン");
-                if (username.isNotEmpty && password.isNotEmpty) {
-                  try {
-                    String data = "grant_type=password&username=${username}&password=${password}&scope=&client_id=&client_secret=";
-                    final response = await widget.apiService.sendGetTokenRequest(data);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Response: ${response.toString()}')),
-                    );
-                    Navigator.push(context,
-                                MaterialPageRoute(builder: (context) => Create_ThreadPage(username,password)));
+            SizedBox(height: 20),
+            SizedBox(
+              width: 200,
+              height: 80,
+              child: ElevatedButton(
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all(Color(0xFFD9D9D9)),
+                ),
+                onPressed: () async {
+                  String username = nameController.text.trim();
+                  String password = passwordController.text.trim();
 
-                } catch (e) {
-                    setState(() {
-                      widget._errorMessage="ユーザー名かパスワードが間違っています";
-                    });
-                    print("errer:${e}");
+                  if (username.isNotEmpty && password.isNotEmpty) {
+                    try {
+                      final token = await apiService.sendGetTokenRequest(username, password);
+                      if (token != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('ログイン成功！')),
+                        );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => ThreadView(authToken: token)),
+                        );
+                      } else {
+                        setState(() {
+                          _errorMessage = "認証エラー: ユーザー名かパスワードが間違っています";
+                        });
+                      }
+                    } catch (e) {
+                      setState(() {
+                        _errorMessage = "サーバーエラー: $e";
+                      });
+                      print("エラー: $e");
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('エラー: $e')),
+                      );
+                    }
+                  } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('errer${e}')),
+                      SnackBar(content: Text('全てのフィールドを入力してください。')),
                     );
                   }
-                  // await authenticateUser(context, name, password);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('全てのフィールドを入力してください。')),
+                },
+                child: Text(
+                  "ログイン",
+                  style: TextStyle(fontSize: 25, color: Color(0xFF000000)),
+                ),
+              ),
+            ),
+            SizedBox(height: 20),
+            SizedBox(
+              width: 200,
+              height: 80,
+              child: ElevatedButton(
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all(Color(0xFFD9D9D9)),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => RegistrationPage()),
                   );
-                }
-              },
-              child: Text(
-                "ログイン",
-                style: TextStyle(
-                  fontSize: 25,
-                  color:Color(0xFF000000),
+                },
+                child: Text(
+                  "初回登録",
+                  style: TextStyle(fontSize: 25, color: Color(0xFF000000)),
                 ),
               ),
             ),
-        ),
-          Padding(
-            padding: EdgeInsets.all(25)
-          ),
-        SizedBox(
-          width: 200,
-          height: 80,// 幅を調整
-          child: ElevatedButton(
-              style: ButtonStyle(
-                backgroundColor: MaterialStateProperty.all(Color(0xFFD9D9D9)),
-              ),
-              onPressed: () async {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => RegistrationPage()),
-                );
-              },
-              child: Text(
-                "初回登録",
-                style: TextStyle(
-                  fontSize: 25,
-                  color:Color(0xFF000000),
-                ),
-              ),
-            ),
-        )
           ],
         ),
       ),

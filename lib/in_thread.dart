@@ -40,7 +40,7 @@ class _In_ThreadPageState extends State<In_ThreadPage> {
 
   Future<List<dynamic>> MessageGetter(String thread_id) async {
     try {
-      var postsUri = 'http://10.0.2.2:8000/posts/'; // 実際のAPIのURLに変更
+      var postsUri = 'http://localhost:8000/posts/'; // 実際のAPIのURLに変更
       var accessToken = await storage.read(key: "accessToken");
       final response = await http.get(
         Uri.parse(postsUri),

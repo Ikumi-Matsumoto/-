@@ -49,7 +49,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
                 if (userName.isNotEmpty && password.isNotEmpty) {
                   if (userName.isNotEmpty && password.isNotEmpty) {
-                    final response = await http.get(Uri.parse('http://10.0.2.2:8000/users'));
+                    final response = await http.get(Uri.parse('http://localhost:8000/users/'));
                     print(response.body);
                     try {
                       Map<String, dynamic> data = {

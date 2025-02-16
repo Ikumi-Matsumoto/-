@@ -48,7 +48,7 @@ class _Create_ThreadPageState extends State<Create_ThreadPage> {
 
   Future<List<dynamic>> ThreadGetter() async {
     try {
-      var postsUri = 'http://10.0.2.2:8000/threads/'; // 実際のAPIのURLに変更
+      var postsUri = 'http://localhost:8000/threads/'; // 実際のAPIのURLに変更
       var accessToken = await storage.read(key: "accessToken");
       final response = await http.get(
         Uri.parse(postsUri),

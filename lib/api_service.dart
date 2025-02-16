@@ -42,8 +42,8 @@ class ThreadsResponse {
 }
 
 class ApiService {
-  final String apiUrl = 'http://10.0.2.2:8000/users/'; // 実際のAPIのURLに変更
-  final String apiUrl_token = 'http://10.0.2.2:8000/token/';
+  final String apiUrl = 'http://localhost:8000/users/'; // 実際のAPIのURLに変更
+  final String apiUrl_token = 'http://localhost:8000/token/';
 
   Future<Map<String, dynamic>> sendPostRequest(Map<String, dynamic> data) async {
     try {
@@ -69,7 +69,7 @@ class ApiService {
   Future<String> MessageCreater(Map<String, dynamic> data) async {
     try {
       print(data);
-      var threadsUri = 'http://10.0.2.2:8000/posts/'; // 実際のAPIのURLに変更
+      var threadsUri = 'http://localhost:8000/posts/'; // 実際のAPIのURLに変更
 
       var accessToken = await storage.read(key: "accessToken");
       print('ストレージ${accessToken}');
@@ -148,7 +148,7 @@ class ApiService {
 
   Future<List<dynamic>> MessageGetter(String thread_id) async {
     try {
-      var postsUri = 'http://10.0.2.2:8000/posts/'; // 実際のAPIのURLに変更
+      var postsUri = 'http://localhost:8000/posts/'; // 実際のAPIのURLに変更
       var accessToken = await storage.read(key: "accessToken");
       final response = await http.get(
         Uri.parse(postsUri),
@@ -183,7 +183,7 @@ class ApiService {
     try {
       print('threadsRequester');
       print(data);
-      var threadsUri = 'http://10.0.2.2:8000/threads/'; // 実際のAPIのURLに変更
+      var threadsUri = 'http://localhost:8000/threads/'; // 実際のAPIのURLに変更
 
       var accessToken = await storage.read(key: "accessToken");
       print('ストレージ${accessToken}');
@@ -265,34 +265,31 @@ class ApiService {
 
 
 
-  Future<Map<String, dynamic>> sendGetTokenRequest(String data) async {
-    try {
-      final response = await http.post(
-        Uri.parse(apiUrl_token),
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'accept': 'application/json'
-        },
-        body: data,
-      );
+  Future<String?> sendGetTokenRequest(String username, String password) async {
+    final apiUrl = Uri.parse('http://localhost:8000/token/');
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        print(response.body.toString());
-        Map<String, dynamic> decoded = json.decode(response.body);
-        var loginResponse = AuthResponse.fromJson(decoded);
-        print('本物のアクセストークン${loginResponse.accessToken}');
-        await storage.write(key: "accessToken", value: loginResponse.accessToken);
-        var accessToken = await storage.read(key: "accessToken");
+    final response = await http.post(
+      apiUrl,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: {
+        'grant_type': 'password',
+        'username': username,
+        'password': password,
+        'scope': '',
+        'client_id': '',
+        'client_secret': '',
+      },
+    );
 
+    print('ログインAPIのレスポンス: ${response.body}'); // ← レスポンスを確認
 
-        return jsonDecode(response.body);
-
-        // サーバーのレスポンスを返す
-      } else {
-        throw Exception('Failed to send data. Status code: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error occurred: $e');
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['access_token']; // トークンを返す
+    } else {
+      throw Exception('ログインに失敗しました: ${response.body}');
     }
   }
 }
@@ -300,37 +297,45 @@ class ApiService {
 Future<String> helloRequester() async {
   try {
     print('helloRequester');
-    var helloUri = 'http://10.0.2.2:8000/users/user'; // 実際のAPIのURLに変更
+    var helloUri = 'http://localhost:8000/users/user'; // 末尾のスラッシュ削除
 
     var accessToken = await storage.read(key: "accessToken");
-    print('ストレージから読んだ${accessToken}');
+
+    if (accessToken == null || accessToken.isEmpty) {
+      print('アクセストークンがありません');
+      return 'エラー: トークンがありません';
+    }
+
+    print('ストレージから読んだ: $accessToken');
+
     final response = await http.get(
       Uri.parse(helloUri),
       headers: {
         'accept': 'application/json',
-        'Authorization': 'Bearer ${accessToken}',
+        'Authorization': 'Bearer $accessToken',
       },
     );
 
-    if (response.statusCode == 200) {
+    print('レスポンスコード: ${response.statusCode}');
+    print('レスポンス内容: ${response.body}');
 
+    if (response.statusCode == 200) {
       Map<String, dynamic> decoded = json.decode(response.body);
-      print('中身${response.body}');
+      print('レスポンス内容: $decoded');
       var helloResponse = HelloResponse.fromJson(decoded);
       return helloResponse.id.toString();
-
-
-    } else if (response.statusCode == 401 || response.statusCode == 404) {
-      print("send refreshTokenRequester");
-      return ('errer');
+    } else if (response.statusCode == 401) {
+      print("認証エラー: アクセストークンが無効");
+      return 'エラー: 認証エラー';
+    } else if (response.statusCode == 307) {
+      print("リダイレクトエラー: URLを確認してください");
+      return 'エラー: リダイレクトエラー';
+    } else {
+      print('エラー: ${response.statusCode}');
+      return 'エラー: 不明なエラー';
     }
-    else {
-      throw Exception("Hello Error");
-    }
-  }catch(e){
-    // throw Exception('Error occurred: $e');
-    return ('エラー${e}');
-
+  } catch (e) {
+    print('例外発生: $e');
+    return 'エラー: $e';
   }
 }
-
